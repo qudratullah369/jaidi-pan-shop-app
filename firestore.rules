@@ -1,0 +1,96 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Set custom claim admin:true on owner accounts for stricter mode later
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // v1.0.1: any signed-in user is staff (Admin Panel login)
+    function isStaff() {
+      return isSignedIn();
+    }
+
+    function isValidPhone(p) {
+      return p is string && p.size() >= 10 && p.size() <= 15;
+    }
+
+    // ---- Catalog: public read, staff write ----
+    match /menu/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if isStaff();
+    }
+
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /promotions/{promoId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // ---- Loyalty customers ----
+    // Read: allowed for app lookup by phone (PII tradeoff for single-shop pilot).
+    // Create: only zero-stamp profiles (registration).
+    // Update: staff may change anything; clients may only reduce stamps (redeem) or edit name.
+    match /customers/{customerId} {
+      allow read: if true;
+
+      allow create: if request.resource.data.keys().hasAll(['name', 'phone', 'totalStamps', 'totalOrders'])
+        && isValidPhone(request.resource.data.phone)
+        && request.resource.data.totalStamps == 0
+        && request.resource.data.totalOrders == 0
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() < 80;
+
+      allow update: if isStaff()
+        || (
+          // Client redeem / self name fix: cannot raise stamps or change phone
+          request.resource.data.phone == resource.data.phone
+          && request.resource.data.totalStamps is int
+          && request.resource.data.totalStamps >= 0
+          && request.resource.data.totalStamps <= resource.data.totalStamps
+        );
+
+      allow delete: if isStaff();
+    }
+
+    match /rewards/{rewardId} {
+      allow read: if isStaff();
+      allow create: if true
+        && request.resource.data.keys().hasAll(['customerId', 'customerPhone', 'stampsUsed', 'rewardType'])
+        && request.resource.data.stampsUsed is int
+        && request.resource.data.stampsUsed > 0;
+      allow update, delete: if isStaff();
+    }
+
+    // ---- Push device tokens ----
+    match /deviceTokens/{tokenId} {
+      allow read: if isStaff();
+      allow create, update: if request.resource.data.fcmToken is string
+        && request.resource.data.fcmToken.size() > 10
+        && request.resource.data.fcmToken.size() < 512;
+      allow delete: if isStaff();
+    }
+
+    // ---- Notification outbox (Cloud Function sends) ----
+    match /notifications/{notifId} {
+      allow read: if isStaff();
+      allow create: if isStaff()
+        && request.resource.data.title is string
+        && request.resource.data.body is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.body.size() < 1000;
+      // Status updates only via Admin SDK in Cloud Functions
+      allow update, delete: if false;
+    }
+  }
+}

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>Jaidi Pan Shop – Admin</title>
+  <link rel="stylesheet" href="css/admin.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- LOGIN SCREEN -->
+  <div id="login-screen" class="screen">
+    <div class="login-card">
+      <div class="login-logo">J</div>
+      <h1>Jaidi Admin</h1>
+      <p class="login-sub">Shop management panel</p>
+
+      <div id="login-error" class="error-msg hidden"></div>
+
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="admin@jaidi.com" autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" />
+      </div>
+      <button id="login-btn" class="btn primary">
+        <span id="login-btn-text">Sign In</span>
+        <span id="login-spinner" class="spinner hidden"></span>
+      </button>
+      <p class="demo-note" id="demo-note">
+        Demo mode active — any email/password works.<br/>
+        Connect Firebase in <code>admin/js/firebase-config.js</code> for real auth.
+      </p>
+    </div>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app-screen" class="screen hidden">
+    <header class="topbar">
+      <div class="topbar-left">
+        <div class="logo-sm">J</div>
+        <span>Jaidi Admin</span>
+        <span id="mode-badge" class="mode-badge">DEMO</span>
+      </div>
+      <div class="topbar-right">
+        <span id="user-email" class="user-email"></span>
+        <button id="logout-btn" class="btn-text">Logout</button>
+      </div>
+    </header>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="menu">Menu</button>
+      <button class="tab" data-tab="settings">Settings</button>
+      <button class="tab" data-tab="promos">Promos</button>
+      <button class="tab" data-tab="loyalty">Loyalty</button>
+      <button class="tab" data-tab="notifications">Notify</button>
+    </nav>
+
+    <!-- Global loading bar -->
+    <div id="global-loading" class="global-loading hidden"></div>
+
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab-panel active">
+      <h2>Dashboard</h2>
+      <div class="stat-grid">
+        <div class="stat-card">
+          <span class="stat-label">Shop Status</span>
+          <strong id="dash-status">—</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Wait Time</span>
+          <strong id="dash-wait">—</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Menu Items</span>
+          <strong id="dash-items">—</strong>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Today’s Special</span>
+          <strong id="dash-special">—</strong>
+        </div>
+      </div>
+      <div class="info-box" id="info-box">
+        <p>Changes are saved to <strong>local storage</strong> (demo mode). Once Firebase is connected they update the live mobile app instantly.</p>
+      </div>
+    </section>
+
+    <!-- MENU -->
+    <section id="tab-menu" class="tab-panel">
+      <div class="panel-header">
+        <h2>Menu Items</h2>
+        <button id="add-item-btn" class="btn primary sm">+ Add Item</button>
+      </div>
+      <div id="menu-list" class="menu-admin-list"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab-panel">
+      <h2>Shop Settings</h2>
+      <div class="form-card">
+        <div class="form-row">
+          <label>Shop is Open</label>
+          <label class="switch">
+            <input type="checkbox" id="set-isOpen" checked />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="form-group">
+          <label>Estimated Wait (minutes)</label>
+          <input type="number" id="set-wait" min="0" max="60" value="7" />
+        </div>
+        <div class="form-group">
+          <label>Today’s Special – Name</label>
+          <input type="text" id="set-special-name" placeholder="e.g. Mango Shake" />
+        </div>
+        <div class="form-group">
+          <label>Today’s Special – Price (Rs.)</label>
+          <input type="number" id="set-special-price" min="0" />
+        </div>
+        <div class="form-group">
+          <label>WhatsApp Number (country code, no +)</label>
+          <input type="text" id="set-whatsapp" placeholder="923220971060" />
+        </div>
+        <div class="form-group">
+          <label>Address</label>
+          <textarea id="set-address" rows="2"></textarea>
+        </div>
+        <button id="save-settings-btn" class="btn primary">Save Settings</button>
+      </div>
+    </section>
+
+    <!-- PROMOS -->
+    <section id="tab-promos" class="tab-panel">
+      <div class="panel-header">
+        <h2>Promotions</h2>
+        <button id="add-promo-btn" class="btn primary sm">+ Add Promo</button>
+      </div>
+      <div id="promo-list" class="promo-list"></div>
+    </section>
+
+    <!-- LOYALTY -->
+    <section id="tab-loyalty" class="tab-panel">
+      <h2>Loyalty Stamps</h2>
+      <div class="form-card" style="margin-bottom:16px">
+        <div class="form-group">
+          <label>Customer phone number</label>
+          <input type="text" id="loyalty-phone" placeholder="03XX-XXXXXXX" />
+        </div>
+        <button id="loyalty-lookup-btn" class="btn primary">Find Customer</button>
+      </div>
+      <div id="loyalty-result" class="hidden">
+        <div class="stat-grid" style="margin-bottom:12px">
+          <div class="stat-card">
+            <span class="stat-label">Name</span>
+            <strong id="loy-name">—</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Stamps</span>
+            <strong id="loy-stamps">—</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Orders</span>
+            <strong id="loy-orders">—</strong>
+          </div>
+          <div class="stat-card">
+            <span class="stat-label">Phone</span>
+            <strong id="loy-phone" style="font-size:13px">—</strong>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <button id="loy-add-stamp" class="btn primary">+ Add 1 Stamp</button>
+          <button id="loy-redeem" class="btn outline">Redeem Reward</button>
+        </div>
+        <div class="form-group">
+          <label>Or register new customer</label>
+          <input type="text" id="loy-new-name" placeholder="Customer name" />
+        </div>
+        <button id="loy-register" class="btn outline">Register & Add Stamp</button>
+      </div>
+      <div id="loyalty-empty" class="info-box" style="margin-top:12px">
+        <p>Enter a phone number to look up or create a loyalty customer. After an order, add a stamp here.</p>
+      </div>
+    </section>
+
+    <!-- NOTIFICATIONS -->
+    <section id="tab-notifications" class="tab-panel">
+      <h2>Send Notification</h2>
+      <div class="form-card">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" id="notif-title" placeholder="e.g. Today's Special" />
+        </div>
+        <div class="form-group">
+          <label>Message *</label>
+          <textarea id="notif-body" rows="3" placeholder="e.g. Mango Shake only Rs. 250 today!"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Target</label>
+          <select id="notif-target">
+            <option value="all">All customers</option>
+            <option value="loyalty">Loyalty members only</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Open screen when tapped (optional)</label>
+          <select id="notif-screen">
+            <option value="">— None —</option>
+            <option value="Menu">Menu</option>
+            <option value="Rewards">Rewards</option>
+            <option value="Home">Home</option>
+            <option value="Cart">Cart</option>
+          </select>
+        </div>
+        <button id="send-notif-btn" class="btn primary">Send Notification</button>
+      </div>
+      <h3 style="margin:20px 0 12px;font-size:16px">Recent notifications</h3>
+      <div id="notif-history" class="promo-list"></div>
+    </section>
+
+  </div>
+
+  <!-- ITEM MODAL -->
+  <div id="item-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3 id="item-modal-title">Add Item</h3>
+      <input type="hidden" id="item-id" />
+      <div class="form-group">
+        <label>Name *</label>
+        <input type="text" id="item-name" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <input type="text" id="item-desc" />
+      </div>
+      <div class="form-group">
+        <label>Price (Rs.) *</label>
+        <input type="number" id="item-price" min="0" />
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <select id="item-cat">
+          <option value="pan">Pan</option>
+          <option value="juices">Juices</option>
+          <option value="shakes">Shakes</option>
+          <option value="snacks">Chaats</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <label>Available</label>
+        <label class="switch">
+          <input type="checkbox" id="item-available" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button id="item-cancel" class="btn outline">Cancel</button>
+        <button id="item-save" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PROMO MODAL -->
+  <div id="promo-modal" class="modal hidden">
+    <div class="modal-card">
+      <h3>Add Promotion</h3>
+      <div class="form-group">
+        <label>Title *</label>
+        <input type="text" id="promo-title" />
+      </div>
+      <div class="form-group">
+        <label>Description</label>
+        <textarea id="promo-desc" rows="2"></textarea>
+      </div>
+      <div class="form-row">
+        <label>Active</label>
+        <label class="switch">
+          <input type="checkbox" id="promo-active" checked />
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="modal-actions">
+        <button id="promo-cancel" class="btn outline">Cancel</button>
+        <button id="promo-save" class="btn primary">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK (compat for simple script tags) -->
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore-compat.js"></script>
+
+  <script src="js/firebase-config.js"></script>
+  <script src="js/admin.js"></script>
+</body>
+</html>
